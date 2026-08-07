@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: company-checker
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 1 --threads 8 --timeout 120
+    envVars:
+      - key: CH_API_KEY
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
