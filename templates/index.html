@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Company Checker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F3F5F4; --card:#FFFFFF; --ink:#182226; --muted:#5A6A66;
+    --line:#D9E0DC; --green:#0E5C46; --green-soft:#E4EFEA;
+    --red:#B23A2E; --red-soft:#F5E6E4; --amber:#8A6410; --amber-soft:#F4EDDC;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font:16px/1.55 "IBM Plex Sans",system-ui,sans-serif;
+       min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 64px}
+  header{width:100%;max-width:660px;display:flex;align-items:baseline;gap:12px;
+         border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:28px}
+  .mark{font:500 13px/1 "IBM Plex Mono",monospace;background:var(--ink);color:var(--paper);
+        padding:6px 8px;letter-spacing:.08em}
+  h1{font-size:20px;font-weight:600;letter-spacing:-.01em}
+  header small{margin-left:auto;font:400 12px "IBM Plex Mono",monospace;color:var(--muted)}
+  main{width:100%;max-width:660px}
+  .card{background:var(--card);border:1px solid var(--line);padding:28px}
+  .lede{color:var(--muted);margin-bottom:22px;max-width:52ch}
+  .drop{border:2px dashed var(--line);padding:36px 20px;text-align:center;cursor:pointer;
+        transition:border-color .15s,background .15s}
+  .drop:hover,.drop:focus-visible,.drop.over{border-color:var(--green);background:var(--green-soft);outline:none}
+  .drop strong{display:block;font-weight:600;margin-bottom:4px}
+  .drop span{color:var(--muted);font-size:14px}
+  .filename{margin-top:14px;font:500 14px "IBM Plex Mono",monospace;color:var(--green);word-break:break-all}
+  label{display:block;font-weight:600;font-size:14px;margin:20px 0 6px}
+  input[type=password]{width:100%;border:1px solid var(--line);padding:10px 12px;font:inherit}
+  input[type=password]:focus-visible{outline:2px solid var(--green);outline-offset:1px}
+  button{margin-top:22px;width:100%;background:var(--green);color:#fff;border:none;
+         padding:14px;font:600 16px "IBM Plex Sans",sans-serif;cursor:pointer}
+  button:hover{background:#0A4A38}
+  button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+  button:disabled{background:var(--line);color:var(--muted);cursor:default}
+  .error{display:none;margin-top:16px;background:var(--red-soft);border-left:3px solid var(--red);
+         padding:12px 14px;font-size:14px}
+  /* progress ledger */
+  .tally{display:none;margin-top:26px;border-top:1px solid var(--line);padding-top:22px}
+  .tally .count{font:500 34px/1.1 "IBM Plex Mono",monospace}
+  .tally .count b{font-weight:500;color:var(--muted)}
+  .tally .doing{font-size:14px;color:var(--muted);margin-top:2px}
+  .bar{height:6px;background:var(--line);margin-top:14px}
+  .bar i{display:block;height:100%;width:0;background:var(--green);transition:width .4s}
+  @media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+  /* results */
+  .eta{font:400 13px "IBM Plex Mono",monospace;color:var(--muted);margin-top:10px}
+  .longrun{display:none;margin-top:16px;background:var(--amber-soft);border-left:3px solid var(--amber);
+           padding:12px 14px;font-size:13.5px;line-height:1.5}
+  .midact{display:flex;gap:10px;margin-top:16px}
+  .mid{flex:1;text-align:center;padding:10px;font:500 14px "IBM Plex Sans",sans-serif;
+       border:1px solid var(--line);background:none;color:var(--ink);text-decoration:none;cursor:pointer;margin:0}
+  .mid:hover{background:var(--paper)}
+  .mid.stop{color:var(--red);border-color:var(--red-soft)}
+  .resumed{display:none;margin-top:14px;background:var(--green-soft);border-left:3px solid var(--green);
+           padding:12px 14px;font-size:13.5px}
+  .results{display:none;margin-top:26px;border-top:1px solid var(--line);padding-top:22px}
+  .stamp{display:inline-block;font:500 13px "IBM Plex Mono",monospace;letter-spacing:.06em;
+         border:1.5px solid currentColor;padding:3px 8px;transform:rotate(-1.5deg)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  .cell{border:1px solid var(--line);padding:14px}
+  .cell .n{font:500 28px/1 "IBM Plex Mono",monospace}
+  .cell .t{font-size:13px;color:var(--muted);margin-top:4px}
+  .cell.good .n{color:var(--green)} .cell.bad .n{color:var(--red)} .cell.mid .n{color:var(--amber)}
+  .note{font-size:13px;color:var(--muted);margin-top:16px}
+  a.dl{display:block;margin-top:20px;background:var(--ink);color:#fff;text-align:center;
+       padding:14px;font-weight:600;text-decoration:none}
+  a.dl:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+  .again{margin-top:10px;background:none;border:1px solid var(--line);color:var(--ink);font-weight:500}
+  .again:hover{background:var(--paper)}
+  footer{margin-top:26px;font:400 12px "IBM Plex Mono",monospace;color:var(--muted);max-width:660px;width:100%}
+</style>
+</head>
+<body>
+<header>
+  <span class="mark">CC</span>
+  <h1>Company Checker</h1>
+  <small>Companies House · live register</small>
+</header>
+
+<main>
+  <div class="card">
+    <p class="lede">Upload a spreadsheet of companies (CSV). Each one is checked against the
+    official Companies House register, and email domains are tested for a working mail server. Large files are fine — up to {{ "{:,}".format(max_rows) }} rows per run.</p>
+
+    {% if key_missing %}
+    <div class="error" style="display:block">The server has no Companies House key yet.
+    Add <b>CH_API_KEY</b> in your hosting settings, then reload this page.</div>
+    {% endif %}
+
+    <div id="setup">
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a CSV file">
+        <strong>Drop your CSV here</strong>
+        <span>or tap to choose a file · needs a company name or number column</span>
+        <div class="filename" id="filename"></div>
+      </div>
+      <input type="file" id="file" accept=".csv" hidden>
+
+      {% if needs_password %}
+      <label for="pw">Access password</label>
+      <input type="password" id="pw" autocomplete="current-password">
+      {% endif %}
+
+      <button id="go" disabled>Check companies</button>
+    </div>
+
+    <div class="error" id="error"></div>
+
+    <div class="tally" id="tally">
+      <div class="count"><span id="done">0</span> <b>/ <span id="total">0</span> checked</b></div>
+      <div class="resumed" id="resumed"></div>
+      <div class="doing" id="doing">Reading the register…</div>
+      <div class="bar"><i id="fill"></i></div>
+      <div class="eta" id="eta"></div>
+      <div class="longrun" id="longrun">
+        <b>Long run in progress.</b> Keep this tab open — closing it pauses the run.
+        If it does stop, upload the same file again and it picks up where it left off.
+      </div>
+      <div class="midact">
+        <a class="mid" id="partial" href="#">Download what's done so far</a>
+        <button class="mid stop" id="stop">Stop the run</button>
+      </div>
+    </div>
+
+    <div class="results" id="results">
+      <span class="stamp" style="color:var(--green)">RUN COMPLETE</span>
+      <div class="grid">
+        <div class="cell good"><div class="n" id="r_active">0</div><div class="t">active companies</div></div>
+        <div class="cell bad"><div class="n" id="r_inactive">0</div><div class="t">dissolved / closing</div></div>
+        <div class="cell good"><div class="n" id="r_email_ok">0</div><div class="t">email domains working</div></div>
+        <div class="cell bad"><div class="n" id="r_email_bad">0</div><div class="t">email dead or invalid</div></div>
+      </div>
+      <p class="note" id="othernote"></p>
+      <a class="dl" id="download" href="#">Download results (CSV)</a>
+      <button class="again" id="again">Check another file</button>
+    </div>
+  </div>
+</main>
+
+<footer>Statuses come directly from Companies House. “Domain working” means the email’s
+domain accepts mail — it can’t guarantee one specific inbox is live.</footer>
+
+<script>
+const drop=document.getElementById('drop'), fileInput=document.getElementById('file'),
+      go=document.getElementById('go'), err=document.getElementById('error'),
+      tally=document.getElementById('tally'), results=document.getElementById('results'),
+      setup=document.getElementById('setup');
+let file=null, timer=null, jobId=null;
+
+function showError(msg){err.textContent=msg;err.style.display='block';}
+function clearError(){err.style.display='none';}
+
+drop.addEventListener('click',()=>fileInput.click());
+drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInput.click();}});
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>{if(e.dataTransfer.files.length)setFile(e.dataTransfer.files[0]);});
+fileInput.addEventListener('change',()=>{if(fileInput.files.length)setFile(fileInput.files[0]);});
+
+function setFile(f){
+  file=f; clearError();
+  document.getElementById('filename').textContent=f.name;
+  go.disabled=false;
+}
+
+go.addEventListener('click',async()=>{
+  clearError(); go.disabled=true; go.textContent='Uploading…';
+  const fd=new FormData(); fd.append('file',file);
+  const pw=document.getElementById('pw'); if(pw)fd.append('password',pw.value);
+  try{
+    const r=await fetch('/upload',{method:'POST',body:fd});
+    const data=await r.json();
+    if(!r.ok){showError(data.error||'Something went wrong.');go.disabled=false;go.textContent='Check companies';return;}
+    jobId=data.job_id;
+    setup.style.display='none'; tally.style.display='block';
+    document.getElementById('total').textContent=data.total.toLocaleString();
+    document.getElementById('partial').href='/download/'+jobId;
+    document.getElementById('doing').textContent=
+      'Matching by '+(data.matched_by||'company number')+'…';
+    if(data.total>500)document.getElementById('longrun').style.display='block';
+    if(data.resumed){
+      const rz=document.getElementById('resumed');
+      rz.style.display='block';
+      rz.innerHTML='<b>Picking up where you left off.</b> '+data.done.toLocaleString()+
+                   ' rows were already done — carrying on from there.';
+    }
+    if(data.eta_seconds)setEta(data.eta_seconds);
+    poll(jobId);
+  }catch(e){
+    showError('Could not reach the server — check your connection and try again.');
+    go.disabled=false; go.textContent='Check companies';
+  }
+});
+
+function setEta(sec){
+  const el=document.getElementById('eta');
+  if(!sec||sec<0){el.textContent='';return;}
+  const h=Math.floor(sec/3600), m=Math.round((sec%3600)/60);
+  let t = h ? h+' hour'+(h>1?'s':'')+(m?' '+m+' min':'') : (m>1? m+' minutes' : 'under a minute');
+  const finish=new Date(Date.now()+sec*1000);
+  el.textContent='About '+t+' remaining — finishing around '+
+    finish.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+
+function poll(id){
+  timer=setInterval(async()=>{
+    try{
+      const r=await fetch('/status/'+id);
+      const s=await r.json();
+      if(!r.ok){clearInterval(timer);showError(s.error||'Lost track of this run — upload the file again to resume.');reset();return;}
+      document.getElementById('done').textContent=(s.done||0).toLocaleString();
+      document.getElementById('fill').style.width=(s.total?100*s.done/s.total:0)+'%';
+      if(s.remaining_seconds!==undefined)setEta(s.remaining_seconds);
+      if(s.state==='interrupted'){
+        clearInterval(timer);
+        showError('The run was interrupted — '+(s.done||0).toLocaleString()+
+                  ' rows are saved. Download them below, or upload the same file again to carry on.');
+        document.getElementById('eta').textContent='';
+        return;
+      }
+      if(s.state==='error'){clearInterval(timer);showError(s.error);reset();}
+      if(s.state==='cancelled'){clearInterval(timer);finish(id,s.summary,true);}
+      if(s.state==='finished'){clearInterval(timer);finish(id,s.summary,false);}
+    }catch(e){/* transient blip - keep polling */}
+  },3000);
+}
+
+document.getElementById('stop').addEventListener('click',async()=>{
+  if(!confirm('Stop the run? Everything checked so far is kept and you can resume later.'))return;
+  await fetch('/cancel/'+jobId,{method:'POST'});
+});
+
+function reset(){
+  tally.style.display='none'; setup.style.display='block';
+  go.disabled=false; go.textContent='Check companies';
+}
+
+function finish(id,s,stopped){
+  tally.style.display='none';
+  results.style.display='block';
+  const stamp=document.querySelector('.stamp');
+  if(stopped){stamp.textContent='STOPPED EARLY';stamp.style.color='var(--amber)';}
+  document.getElementById('r_active').textContent=(s.active||0).toLocaleString();
+  document.getElementById('r_inactive').textContent=(s.inactive||0).toLocaleString();
+  document.getElementById('r_email_ok').textContent=(s.email_ok||0).toLocaleString();
+  document.getElementById('r_email_bad').textContent=(s.email_bad||0).toLocaleString();
+  document.getElementById('othernote').textContent=
+    s.other?s.other.toLocaleString()+' had another status (e.g. not found) — details are in the file.':'';
+  document.getElementById('download').href='/download/'+id;
+}
+
+document.getElementById('again').addEventListener('click',()=>{
+  results.style.display='none'; setup.style.display='block';
+  file=null; document.getElementById('filename').textContent='';
+  go.disabled=true; go.textContent='Check companies';
+});
+</script>
+</body>
+</html>
